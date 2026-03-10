@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>КАБ Стаж Платформа</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#F4F2EE;min-height:100vh}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#eee}::-webkit-scrollbar-thumb{background:#ccc}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.nb{padding:9px 18px;border:none;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;background:transparent;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;transition:all .15s;font-family:inherit}
+.nb.on{color:#fff;border-bottom-color:#C8A96E}.nb:hover{color:#fff}
+.pb{padding:5px 12px;border:1.5px solid #ccc;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:white;color:#444;transition:all .1s;font-family:inherit}
+.pb.on{background:#111;color:#fff;border-color:#111}.pb:hover{border-color:#111}
+.tc{border-top:1px solid #E8E5E0;cursor:pointer;transition:background .1s}.tc:hover{background:#F8F6F2}.tc.op{background:#fff}
+.cb{padding:4px 10px;border:1px solid #ccc;background:white;cursor:pointer;font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#555;transition:all .1s;font-family:inherit}
+.cb:hover{border-color:#111;color:#111}.cb.ok{background:#111;color:#fff;border-color:#111}
+textarea,input,select{font-family:inherit}
+textarea:focus,input:focus,select:focus{outline:none;border-color:#C8A96E!important}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect}=React;
+
+const CAT=[
+  {id:"1",name:"Ръководство на проекти и административно ръководство",label:"КАТ. 1",mp:10,m2:200,m4:400,
+   sub:["Срещи и събеседване с клиенти; формулиране на изискванията","Обсъждане на задание и предварителни схеми с клиенти","Ръководство на проекти до сключване на договор за строителство","Определяне на условия за договор / тръжни процедури","Подготовка на преписки","Координация на инженерните специалности (консултанти)","Административен и проектантски счетоводен отчет"]},
+  {id:"2",name:"Проектиране и проектна документация",label:"КАТ. 2",mp:40,m2:800,m4:1600,
+   sub:["Изследване и оценка на проектната територия","Срещи с представители на съгласуващи институции","Оценка на нормативи и изходни условия","Подготовка на предварителни, идейни и технически чертежи","Проверка на проектните предложения по Законодателството","Разработка на бизнес план, бюджет и ТИО"]},
+  {id:"3",name:"Строителна документация",label:"КАТ. 3",mp:35,m2:700,m4:1400,
+   sub:["Подготовка на работни чертежи и спецификации","Наблюдение и контрол на документацията","Проверка на документи за съответствие със законодателството","Координиране документацията на подизпълнителите"]},
+  {id:"4",name:"Управление в процеса на строителството",label:"КАТ. 4",mp:15,m2:300,m4:600,
+   sub:["Срещи на строителната площадка","Проверка по изпълнение на строителството","Изготвяне на инструкции и утвърждаващи документи за СМР","Отчетност пред възложителя"]},
+];
+const MO=["Януари","Февруари","Март","Април","Май","Юни","Юли","Август","Септември","Октомври","Ноември","Декември"];
+const CY=new Date().getFullYear(),YRS=[CY-2,CY-1,CY,CY+1];
+const UID=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const WD=(y,m)=>{const d=new Date(y,m+1,0).getDate();let n=0;for(let i=1;i<=d;i++){const w=new Date(y,m,i).getDay();if(w&&w<6)n++;}return n;};
+const QM=q=>[q*3-3,q*3-2,q*3-1];
+const gls=(k,f)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch{return f;}};
+const sls=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+const EMD=()=>{const d={};YRS.forEach(y=>{d[y]={};for(let m=0;m<12;m++)d[y][m]={t:[]};});return d;};
+
+function SP(){return <span style={{width:11,height:11,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid white",borderRadius:"50%",display:"inline-block",animation:"spin .8s linear infinite"}}/>;}
+function FI({l,v,c,ph,t="text",kd}){return(
+  <div>
+    <div style={{fontSize:8,letterSpacing:2,color:"#444",textTransform:"uppercase",marginBottom:6}}>{l}</div>
+    <input type={t} value={v} onChange={e=>c(e.target.value)} placeholder={ph} onKeyDown={kd}
+      style={{width:"100%",padding:"10px 12px",background:"#0A0A0A",border:"1px solid #1E1E1E",color:"#EEE",fontSize:13}}/>
+  </div>
+);}
+
+function App(){
+  const[screen,setScreen]=useState(()=>{try{return localStorage.getItem("ks")?"app":"login";}catch{return"login";}});
+  const[usr,setUsr]=useState(()=>{try{const s=localStorage.getItem("ks");return s?JSON.parse(s):null;}catch{return null;}});
+  const[data,setData]=useState(EMD);
+  const[inited,setInited]=useState(false);
+  const[af,setAf]=useState({e:"",p:"",n:"",f:""});
+  const[ae,setAe]=useState("");const[al,setAl]=useState(false);
+  const[view,setView]=useState("q");
+  const[yr,setYr]=useState(CY);
+  const[qt,setQt]=useState(Math.ceil((new Date().getMonth()+1)/3));
+  const[tr,setTr]=useState("2yr");
+  const[msg,setMsg]=useState("");
+  const[exk,setExk]=useState(null);const[cpk,setCpk]=useState("");
+  const[am,setAm]=useState(null);const[nt,setNt]=useState(null);
+  const[aim,setAim]=useState(null);const[ait,setAit]=useState("");const[ail,setAil]=useState(false);const[aip,setAip]=useState(null);const[aie,setAie]=useState("");
+  const[ry,setRy]=useState(CY);const[rm,setRm]=useState(new Date().getMonth());
+  const[rt,setRt]=useState("");const[rl,setRl]=useState(false);const[rr,setRr]=useState("");const[re,setRe]=useState("");const[rcp,setRcp]=useState(false);
+  const[rps,setRps]=useState([]);const[rs,setRs]=useState("nd");
+  const[eid,setEid]=useState(null);const[et,setEt]=useState("");
+  const tg=tr==="2yr"?4000:8000;
+
+  useEffect(()=>{
+    if(usr&&!inited){
+      const x=gls("kd_"+usr.id,null);
+      if(x){if(x.d)setData(x.d);if(x.r)setRps(x.r||[]);if(x.tr)setTr(x.tr);}
+      else setData(EMD());
+      setInited(true);
+    }
+  },[usr,inited]);
+
+  useEffect(()=>{if(usr&&inited)sls("kd_"+usr.id,{d:data,r:rps,tr});},[data,rps,tr,usr,inited]);
+
+  function reg(){
+    setAe("");setAl(true);
+    setTimeout(()=>{
+      if(!af.e||!af.p||!af.n){setAe("Попълни всички задължителни полета.");setAl(false);return;}
+      if(af.p.length<6){setAe("Паролата трябва да е поне 6 символа.");setAl(false);return;}
+      const us=gls("ku",[]);
+      if(us.find(u=>u.e===af.e)){setAe("Имейлът вече е регистриран.");setAl(false);return;}
+      const u={id:UID(),e:af.e,n:af.n,f:af.f};
+      sls("ku",[...us,{...u,p:af.p}]);sls("ks",u);
+      setUsr(u);setData(EMD());setRps([]);setInited(true);setScreen("app");setAl(false);
+    },400);
+  }
+
+  function login(){
+    setAe("");setAl(true);
+    setTimeout(()=>{
+      const us=gls("ku",[]);
+      const u=us.find(u=>u.e===af.e&&u.p===af.p);
+      if(!u){setAe("Грешен имейл или парола.");setAl(false);return;}
+      const uu={id:u.id,e:u.e,n:u.n,f:u.f};
+      sls("ks",uu);setUsr(uu);setInited(false);setScreen("app");setAl(false);
+    },400);
+  }
+
+  function logout(){
+    try{localStorage.removeItem("ks");}catch{}
+    setUsr(null);setScreen("login");setData(EMD());setRps([]);setInited(false);
+    setAf({e:"",p:"",n:"",f:""});
+  }
+
+  const fl=m=>{setMsg(m);setTimeout(()=>setMsg(""),2000);};
+  const MT=(y,m)=>((data[y]&&data[y][m]&&data[y][m].t)||[]);
+  const MH=(y,m)=>MT(y,m).reduce((s,t)=>s+Number(t.h),0);
+  function CHQ(y,q){const tot={};CAT.forEach(c=>{tot[c.id]=0;});QM(q).forEach(m=>{MT(y,m).forEach(t=>{if(tot[t.cid]!==undefined)tot[t.cid]+=Number(t.h);});});return tot;}
+  const QT=(y,q)=>Object.values(CHQ(y,q)).reduce((a,b)=>a+b,0);
+  function SUM(){
+    const ct={};CAT.forEach(c=>{ct[c.id]=0;});
+    const qd=YRS.reduce((a,y)=>a.concat([1,2,3,4].map(q=>({y,q,h:QT(y,q),ch:CHQ(y,q)}))),[]). filter(x=>x.h>0);
+    qd.forEach(x=>CAT.forEach(c=>{ct[c.id]+=x.ch[c.id];}));
+    return{ct,g:Object.values(ct).reduce((a,b)=>a+b,0),qd};
+  }
+  function addT(mIdx,tasks){setData(p=>{const u={...p};const mo={...u[yr][mIdx]};mo.t=[...mo.t,...tasks.map(t=>({...t,id:UID()}))];u[yr]={...u[yr]};u[yr][mIdx]=mo;return u;});}
+  function delT(mIdx,id){setData(p=>{const u={...p};const mo={...u[yr][mIdx]};mo.t=mo.t.filter(t=>t.id!==id);u[yr]={...u[yr]};u[yr][mIdx]=mo;return u;});}
+  const cpt=(text,k)=>{navigator.clipboard.writeText(text).then(()=>{setCpk(k);setTimeout(()=>setCpk(""),1800);});};
+
+  async function runAI(){
+    if(!ait.trim())return;setAil(true);setAie("");setAip(null);
+    const mIdx=aim.mi,wd=WD(yr,mIdx),th=wd*8;
+    const cats=CAT.map(c=>c.id+" = "+c.name).join("\n");
+    const prompt=`Разпредели работата на архитект по КАБ категории.\nКАТЕГОРИИ:\n${cats}\nМЕСЕЦ: ${MO[mIdx]} ${yr}\nРаботни дни: ${wd} x 8ч = ${th}ч общо\nРазпредели ВСИЧКИ часове. Остатъка добави към категория 2.\nФОРМАТ - само редове: CATID|описание|часове\nОПИСАНИЕ:\n${ait}`;
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,messages:[{role:"user",content:prompt}]})});
+      const rd=await r.json();const raw=(rd.content||[]).map(i=>i.text||"").join("").trim();
+      const vi=new Set(CAT.map(c=>c.id));const tasks=[];
+      raw.split("\n").forEach(line=>{line=line.trim();if(!line||!line.includes("|"))return;const p=line.split("|");if(p.length<3)return;const cid=p[0].trim().replace(/\D/g,"");const desc=p[1].trim(),h=parseFloat(p[2]);if(!vi.has(cid)||!h||h<=0||!desc)return;tasks.push({cid,sub:"",description:desc,h});});
+      if(!tasks.length)throw new Error("Не бяха разпознати задачи.");setAip(tasks);
+    }catch(e){setAie(e.message||"Грешка.");}setAil(false);
+  }
+  const confAI=()=>{addT(aim.mi,aip);fl("Запазено");setAim(null);setAit("");setAip(null);setAie("");};
+
+  async function runRep(){
+    setRl(true);setRe("");setRr("");
+    const cats=CAT.map(c=>c.id+". "+c.name).join("\n");
+    const prompt=`Форматирай като официален МЕСЕЧЕН ОТЧЕТ за придобит стаж по специалността за месец ${MO[rm]} ${ry}.\nСтруктурирай по 4 категории:\n${cats}\nПРАВИЛА:\n- Официален архитектурен стил\n- Всяка категория = заглавие + списък с дейности\n- Ако няма дейности: Няма извършвани дейности за периода.\n- Накрая: Обобщение с часове по категории\n- НЕ измисляй информация\nТЕКСТ:\n${rt}`;
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]})});
+      const rd=await r.json();const txt=(rd.content||[]).map(i=>i.text||"").join("").trim();
+      if(!txt)throw new Error("Празен отговор");setRr(txt);
+    }catch(e){setRe(e.message);}setRl(false);
+  }
+  const saveRep=()=>{if(!rr.trim())return;setRps(p=>[{id:UID(),title:MO[rm]+" "+ry,m:rm,y:ry,text:rr,ca:Date.now()},...p]);fl("Отчетът е запазен");};
+  const srtRps=()=>{const a=[...rps];if(rs==="nd")a.sort((x,y)=>y.ca-x.ca);if(rs==="od")a.sort((x,y)=>x.ca-y.ca);if(rs==="mo")a.sort((x,y)=>(x.y*12+x.m)-(y.y*12+y.m));return a;};
+
+  const mis=QM(qt),qch=CHQ(yr,qt),qtot=QT(yr,qt),{ct,g,qd}=SUM();
+
+  // ── AUTH ──────────────────────────────────────────────────────────────────
+  if(screen!=="app") return (
+    <div style={{minHeight:"100vh",background:"#0A0A0A",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{width:"100%",maxWidth:400,animation:"fu .35s ease"}}>
+        <div style={{textAlign:"center",marginBottom:40}}>
+          <div style={{fontSize:9,letterSpacing:6,color:"#C8A96E",textTransform:"uppercase",marginBottom:10}}>КАБ Стаж</div>
+          <div style={{fontSize:36,fontWeight:900,color:"#FFF",letterSpacing:-1,fontFamily:"Georgia,serif"}}>ПЛАТФОРМА</div>
+          <div style={{fontSize:9,letterSpacing:3,color:"#333",marginTop:8}}>ПРОЕКТАНТСКИ СТАЖ · БЪЛГАРИЯ</div>
+        </div>
+        <div style={{background:"#111",border:"1px solid #1E1E1E",padding:"28px 24px"}}>
+          <div style={{display:"flex",marginBottom:24,borderBottom:"1px solid #1E1E1E"}}>
+            {[["login","Вход"],["register","Регистрация"]].map(([s,l])=>(
+              <button key={s} onClick={()=>{setScreen(s);setAe("");}}
+                style={{flex:1,padding:"10px 0",background:"none",border:"none",cursor:"pointer",fontSize:9,letterSpacing:3,textTransform:"uppercase",fontFamily:"inherit",
+                  color:screen===s?"#C8A96E":"#333",borderBottom:screen===s?"2px solid #C8A96E":"2px solid transparent",transition:"all .2s",marginBottom:-1}}>{l}</button>
+            ))}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {screen==="register"&&<>
+              <FI l="Пълно Име *" v={af.n} c={v=>setAf({...af,n:v})} ph="Иван Петров"/>
+              <FI l="Фирма / Бюро" v={af.f} c={v=>setAf({...af,f:v})} ph="Архитектурно бюро"/>
+            </>}
+            <FI l="Имейл *" t="email" v={af.e} c={v=>setAf({...af,e:v})} ph="ivan@buro.bg"/>
+            <FI l="Парола *" t="password" v={af.p} c={v=>setAf({...af,p:v})} ph="••••••••"
+              kd={e=>e.key==="Enter"&&(screen==="login"?login():reg())}/>
+          </div>
+          {ae&&<div style={{marginTop:14,padding:"10px 12px",background:"#1A0808",border:"1px solid #3A1212",fontSize:12,color:"#FF6B6B"}}>{ae}</div>}
+          <button onClick={screen==="login"?login:reg} disabled={al}
+            style={{width:"100%",marginTop:20,padding:"13px",border:"none",background:al?"#1A1A1A":"#C8A96E",
+              color:al?"#444":"#0A0A0A",cursor:al?"not-allowed":"pointer",fontSize:9,letterSpacing:4,
+              textTransform:"uppercase",fontFamily:"inherit",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {al?<><SP/>Зареждане...</>:screen==="login"?"Влез →":"Регистрирай се →"}
+          </button>
+        </div>
+        <div style={{textAlign:"center",marginTop:18,fontSize:9,color:"#222",letterSpacing:1}}>КАБ · Камара на Архитектите в България</div>
+      </div>
+    </div>
+  );
+
+  // ── MAIN APP ──────────────────────────────────────────────────────────────
+  return (
+    <div style={{background:"#F4F2EE",minHeight:"100vh",paddingBottom:80}}>
+
+      {/* HEADER */}
+      <div style={{background:"#111",borderBottom:"1px solid #2a2a2a",position:"sticky",top:0,zIndex:50}}>
+        <div style={{maxWidth:1200,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"stretch",justifyContent:"space-between"}}>
+          <div style={{padding:"12px 0",paddingRight:18,marginRight:18,borderRight:"1px solid #2a2a2a",display:"flex",alignItems:"center",gap:10}}>
+            <div>
+              <div style={{fontSize:7,letterSpacing:3,color:"#555",textTransform:"uppercase"}}>КАБ — Структуриран стаж</div>
+              <div style={{fontSize:16,fontWeight:900,color:"#fff",letterSpacing:-.5}}>ДНЕВНИК ЗА ППП</div>
+            </div>
+            {msg&&<div style={{fontSize:9,letterSpacing:2,color:"#6EE7B7",textTransform:"uppercase",animation:"fu .2s ease",marginLeft:10}}>{msg}</div>}
+          </div>
+          <nav style={{display:"flex",alignItems:"stretch",flex:1}}>
+            {[["q","ТРИМЕСЕЧИЕ"],["s","ОБОБЩЕНИЕ"],["r","ОТЧЕТИ"]].map(([v,l])=>(
+              <button key={v} className={"nb"+(view===v?" on":"")} onClick={()=>setView(v)}>{l}</button>
+            ))}
+          </nav>
+          <div style={{display:"flex",alignItems:"center",gap:10,paddingLeft:16,borderLeft:"1px solid #2a2a2a"}}>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:10,color:"#FFF",fontWeight:700}}>{usr?.n}</div>
+              {usr?.f&&<div style={{fontSize:9,color:"#444"}}>{usr.f}</div>}
+            </div>
+            <button onClick={logout} style={{padding:"5px 12px",border:"1px solid #2a2a2a",background:"transparent",color:"#555",cursor:"pointer",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"inherit"}}>Изход</button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{maxWidth:1200,margin:"0 auto",padding:"20px"}}>
+
+      {/* ══ QUARTER ══ */}
+      {view==="q"&&(
+        <div style={{animation:"fu .18s ease"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:16,paddingBottom:12,borderBottom:"2px solid #111"}}>
+            <span style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:"#888",marginRight:4}}>Година</span>
+            {YRS.map(y=><button key={y} className={"pb"+(yr===y?" on":"")} onClick={()=>setYr(y)}>{y}</button>)}
+            <div style={{width:1,height:18,background:"#DDD",margin:"0 8px"}}/>
+            <span style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:"#888",marginRight:4}}>Тримесечие</span>
+            {[1,2,3,4].map(q=><button key={q} className={"pb"+(qt===q?" on":"")} onClick={()=>setQt(q)}>Q{q} / {yr}</button>)}
+          </div>
+          {/* Quarter strip */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr) auto",marginBottom:14,border:"1px solid #222",background:"#111"}}>
+            {CAT.map(c=>(
+              <div key={c.id} style={{padding:"12px 14px",borderRight:"1px solid #2a2a2a"}}>
+                <div style={{fontSize:7,letterSpacing:2,color:"#555",textTransform:"uppercase",marginBottom:3}}>{c.label}</div>
+                <div style={{fontSize:24,fontWeight:900,color:"#fff",lineHeight:1}}>{qch[c.id]}</div>
+                <div style={{fontSize:9,color:"#444",marginTop:2}}>часа</div>
+              </div>
+            ))}
+            <div style={{padding:"12px 20px",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"flex-end"}}>
+              <div style={{fontSize:7,letterSpacing:2,color:"#C8A96E",textTransform:"uppercase",marginBottom:2}}>Общо Q</div>
+              <div style={{fontSize:32,fontWeight:900,color:"#C8A96E",lineHeight:1}}>{qtot}</div>
+              <div style={{fontSize:9,color:"#C8A96E",opacity:.5}}>часа</div>
+            </div>
+          </div>
+          {/* Month columns */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+            {mis.map(mIdx=>{
+              const tasks=MT(yr,mIdx),mH=MH(yr,mIdx),wd=WD(yr,mIdx);
+              return(
+                <div key={mIdx} style={{background:"white",border:"1px solid #E8E5E0"}}>
+                  <div style={{padding:"12px 14px",borderBottom:"2px solid #111",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div>
+                      <div style={{fontSize:17,fontWeight:900,color:"#111",textTransform:"uppercase"}}>{MO[mIdx]}</div>
+                      <div style={{fontSize:9,color:"#AAA",letterSpacing:1,marginTop:2}}>{wd} РАБ.ДНИ · {wd*8}Ч</div>
+                    </div>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <span style={{fontSize:17,fontWeight:900,color:mH>0?"#111":"#DDD"}}>{mH}<span style={{fontSize:9,fontWeight:400,color:"#999",marginLeft:1}}>ч</span></span>
+                      <button onClick={()=>{setAim({mi:mIdx});setAit("");setAip(null);setAie("");}}
+                        style={{padding:"5px 10px",background:"#111",color:"#fff",border:"none",cursor:"pointer",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"inherit"}}>AI</button>
+                    </div>
+                  </div>
+                  {CAT.map(cat=>{
+                    const cts=tasks.filter(t=>t.cid===cat.id),ch=cts.reduce((s,t)=>s+Number(t.h),0);
+                    return(
+                      <div key={cat.id} style={{borderBottom:"1px solid #F0EDE6"}}>
+                        <div onClick={()=>{setAm({mi:mIdx,cid:cat.id});setNt({cid:cat.id,sub:"",description:"",h:""});}}
+                          style={{padding:"7px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",background:"#F9F7F3",borderBottom:"1px solid #F0EDE6"}}>
+                          <span style={{fontSize:8,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"#777"}}>{cat.label}</span>
+                          <span style={{display:"flex",alignItems:"center",gap:6}}>
+                            {ch>0&&<span style={{fontSize:11,fontWeight:700,color:"#111"}}>{ch}ч</span>}
+                            <span style={{fontSize:14,color:"#BBB"}}>+</span>
+                          </span>
+                        </div>
+                        {cts.map(task=>{
+                          const key=mIdx+"-"+task.id,open=exk===key;
+                          return(
+                            <div key={task.id} className={"tc"+(open?" op":"")} onClick={()=>setExk(open?null:key)}>
+                              <div style={{padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:12,color:"#333",lineHeight:1.4,overflow:"hidden",textOverflow:open?"clip":"ellipsis",whiteSpace:open?"normal":"nowrap"}}>{task.description}</div>
+                                  {!open&&task.sub&&<div style={{fontSize:9,color:"#BBB",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.sub}</div>}
+                                </div>
+                                <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+                                  <span style={{fontSize:12,fontWeight:700,color:"#111"}}>{task.h}ч</span>
+                                  <span style={{fontSize:10,color:"#CCC",transform:open?"rotate(180deg)":"none",display:"inline-block",transition:"transform .15s"}}>▼</span>
+                                </div>
+                              </div>
+                              {open&&(
+                                <div style={{borderTop:"1px solid #F0EDE6",padding:"10px 14px 12px",background:"#FAFAF8",animation:"fu .12s ease"}}>
+                                  {task.sub&&<div style={{fontSize:9,color:"#999",letterSpacing:1,textTransform:"uppercase",marginBottom:5}}>{task.sub}</div>}
+                                  <div style={{fontSize:13,color:"#222",lineHeight:1.65,marginBottom:10}}>{task.description}</div>
+                                  <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                                    <button className={"cb"+(cpk===key+"-d"?" ok":"")} onClick={e=>{e.stopPropagation();cpt(task.description,key+"-d");}}>{cpk===key+"-d"?"Копирано":"Копирай текст"}</button>
+                                    <button className={"cb"+(cpk===key+"-f"?" ok":"")} onClick={e=>{e.stopPropagation();cpt(cat.name+" — "+task.description+" ("+task.h+"ч)",key+"-f");}}>{cpk===key+"-f"?"Копирано":"Копирай с категория"}</button>
+                                    <button onClick={e=>{e.stopPropagation();delT(mIdx,task.id);setExk(null);fl("Изтрито");}}
+                                      style={{marginLeft:"auto",padding:"4px 10px",border:"1px solid #FFCDD2",background:"#FFF5F5",cursor:"pointer",fontSize:9,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"#C00",fontFamily:"inherit"}}>Изтрий</button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ══ SUMMARY ══ */}
+      {view==="s"&&(
+        <div style={{animation:"fu .18s ease"}}>
+          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:16,paddingBottom:12,borderBottom:"2px solid #111",flexWrap:"wrap",gap:10}}>
+            <div>
+              <div style={{fontSize:7,letterSpacing:3,color:"#888",textTransform:"uppercase",marginBottom:3}}>КАБ — Структуриран стаж</div>
+              <div style={{fontSize:22,fontWeight:900,color:"#111",letterSpacing:-.5}}>ОБОБЩЕНИЕ НА СТАЖА</div>
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#888"}}>Вид стаж</span>
+              <button className={"pb"+(tr==="2yr"?" on":"")} onClick={()=>setTr("2yr")}>2 год. / 4 000ч</button>
+              <button className={"pb"+(tr==="4yr"?" on":"")} onClick={()=>setTr("4yr")}>4 год. / 8 000ч</button>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"auto 1fr",marginBottom:18,border:"1px solid #222",background:"#111"}}>
+            <div style={{padding:"18px 26px",borderRight:"1px solid #2a2a2a"}}>
+              <div style={{fontSize:7,letterSpacing:3,color:"#555",textTransform:"uppercase",marginBottom:5}}>Общо часове</div>
+              <div style={{fontSize:52,fontWeight:900,color:"#fff",lineHeight:1,letterSpacing:-2}}>{g}</div>
+              <div style={{fontSize:10,color:"#444",marginTop:3}}>/ {tg} часа</div>
+            </div>
+            <div style={{padding:"16px 22px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <span style={{fontSize:9,letterSpacing:1,textTransform:"uppercase",color:"#666"}}>Прогрес към ППП</span>
+                <span style={{fontWeight:700,color:"#C8A96E",fontSize:16}}>{Math.round((g/tg)*100)}%</span>
+              </div>
+              <div style={{height:6,background:"rgba(255,255,255,.07)"}}>
+                <div style={{height:"100%",background:"#C8A96E",width:Math.min((g/tg)*100,100)+"%",transition:"width .5s"}}/>
+              </div>
+              <div style={{fontSize:10,color:"#444",marginTop:6}}>Остават: <span style={{color:"#888",fontWeight:700}}>{Math.max(tg-g,0)} часа</span></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 22px",marginTop:14}}>
+                {CAT.map(c=>{const h=ct[c.id],mh=tr==="2yr"?c.m2:c.m4,ok=h>=mh;return(
+                  <div key={c.id}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#555",letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>
+                      <span>{c.label}</span><span style={{color:ok?"#6EE7B7":"#FCA5A5",fontWeight:700}}>{h}ч / {mh}ч</span>
+                    </div>
+                    <div style={{height:3,background:"rgba(255,255,255,.07)"}}>
+                      <div style={{height:"100%",background:ok?"#6EE7B7":"#FCA5A5",width:Math.min(mh>0?Math.round((h/mh)*100):0,100)+"%"}}/>
+                    </div>
+                  </div>
+                );})}
+              </div>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
+            {CAT.map(cat=>{
+              const h=ct[cat.id],mh=tr==="2yr"?cat.m2:cat.m4,ok=h>=mh;
+              const pp=mh>0?Math.min(Math.round((h/mh)*100),100):0,pa=g>0?Math.round((h/g)*100):0;
+              return(
+                <div key={cat.id} style={{background:"white",border:"1px solid "+(ok?"#E8E5E0":"#FFC9CC")}}>
+                  <div style={{padding:"12px 14px",borderBottom:"2px solid "+(ok?"#111":"#E53935"),display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div>
+                      <div style={{fontSize:7,letterSpacing:2,color:"#888",textTransform:"uppercase",marginBottom:3}}>{cat.label} · {cat.mp}% мин.</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#111",lineHeight:1.3}}>{cat.name}</div>
+                    </div>
+                    <div style={{textAlign:"right",marginLeft:8}}>
+                      <div style={{fontSize:26,fontWeight:900,color:ok?"#111":"#E53935",lineHeight:1}}>{h}</div>
+                      <div style={{fontSize:9,color:ok?"#2D9E5F":"#E53935",fontWeight:700,marginTop:1}}>{ok?"ИЗПЪЛНЕНО":"−"+(mh-h)+"Ч"}</div>
+                    </div>
+                  </div>
+                  <div style={{padding:"8px 14px 11px"}}>
+                    <div style={{height:3,background:"#F0EDE6",marginBottom:5}}>
+                      <div style={{height:"100%",background:ok?"#111":"#E53935",width:pp+"%"}}/>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#AAA"}}>
+                      <span>{pp}% от минимума ({mh}ч)</span><span>{pa}% от всички часове</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {qd.length>0?(
+            <div>
+              <div style={{fontSize:7,letterSpacing:3,color:"#888",textTransform:"uppercase",marginBottom:8}}>По тримесечия</div>
+              <div style={{border:"1px solid #E8E5E0",background:"white"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead>
+                    <tr style={{background:"#111",color:"#fff"}}>
+                      <th style={{padding:"9px 14px",textAlign:"left",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase"}}>Период</th>
+                      {CAT.map(c=><th key={c.id} style={{padding:"9px 10px",textAlign:"center",fontSize:7,letterSpacing:1.5,fontWeight:700,color:"#888",textTransform:"uppercase"}}>{c.label}</th>)}
+                      <th style={{padding:"9px 14px",textAlign:"right",fontSize:7,letterSpacing:2,fontWeight:700,color:"#C8A96E",textTransform:"uppercase"}}>Общо</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qd.map((x,i)=>(
+                      <tr key={i} style={{borderBottom:"1px solid #F0EDE6",background:i%2===0?"white":"#FAFAF8"}}>
+                        <td style={{padding:"8px 14px",fontWeight:700,color:"#111"}}>Q{x.q} / {x.y}</td>
+                        {CAT.map(c=><td key={c.id} style={{padding:"8px 10px",textAlign:"center",color:x.ch[c.id]>0?"#111":"#DDD",fontWeight:x.ch[c.id]>0?"700":"400"}}>{x.ch[c.id]>0?x.ch[c.id]:"—"}</td>)}
+                        <td style={{padding:"8px 14px",textAlign:"right",fontWeight:900,color:"#111"}}>{x.h}ч</td>
+                      </tr>
+                    ))}
+                    <tr style={{background:"#111",color:"#fff"}}>
+                      <td style={{padding:"9px 14px",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",fontWeight:700}}>Общо</td>
+                      {CAT.map(c=>{const ok=ct[c.id]>=(tr==="2yr"?c.m2:c.m4);return<td key={c.id} style={{padding:"9px 10px",textAlign:"center"}}><span style={{color:ok?"#6EE7B7":"#FCA5A5",fontWeight:900}}>{ct[c.id]}</span></td>;})}
+                      <td style={{padding:"9px 14px",textAlign:"right",color:"#C8A96E",fontWeight:900}}>{g}ч</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ):(
+            <div style={{textAlign:"center",padding:48,color:"#CCC",background:"white",border:"1px solid #E8E5E0"}}>
+              <div style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",marginBottom:6}}>Няма данни</div>
+              <div style={{fontSize:13,color:"#AAA"}}>Въведете часове в раздел Тримесечие</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ REPORTS ══ */}
+      {view==="r"&&(
+        <div style={{animation:"fu .18s ease"}}>
+          <div style={{paddingBottom:12,marginBottom:16,borderBottom:"2px solid #111"}}>
+            <div style={{fontSize:7,letterSpacing:3,color:"#888",textTransform:"uppercase",marginBottom:3}}>КАБ — Структуриран стаж</div>
+            <div style={{fontSize:22,fontWeight:900,color:"#111",letterSpacing:-.5}}>ОТЧЕТИ</div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+            <div>
+              <div style={{background:"white",border:"1px solid #E8E5E0"}}>
+                <div style={{padding:"12px 14px",borderBottom:"1px solid #E8E5E0",background:"#F9F7F3"}}>
+                  <div style={{fontSize:7,letterSpacing:2,color:"#888",textTransform:"uppercase",marginBottom:10}}>Параметри</div>
+                  <div style={{display:"flex",gap:10}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:7,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:4}}>Месец</div>
+                      <select value={rm} onChange={e=>setRm(Number(e.target.value))} style={{width:"100%",padding:"7px",border:"1px solid #DDD",fontSize:12,background:"white",color:"#111"}}>
+                        {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:7,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:4}}>Година</div>
+                      <select value={ry} onChange={e=>setRy(Number(e.target.value))} style={{width:"100%",padding:"7px",border:"1px solid #DDD",fontSize:12,background:"white",color:"#111"}}>
+                        {YRS.map(y=><option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div style={{padding:"14px"}}>
+                  <div style={{fontSize:7,letterSpacing:2,color:"#888",textTransform:"uppercase",marginBottom:6}}>Описание на работата</div>
+                  <textarea value={rt} onChange={e=>setRt(e.target.value)}
+                    placeholder={"Пиши свободно:\n\n- Конкурс жилищна сграда: идейна концепция\n- Работни чертежи административна сграда\n- Координация с конструктор\n- Срещи с клиент и институции"}
+                    rows={10} style={{width:"100%",padding:"10px",border:"1px solid #DDD",fontSize:13,resize:"vertical",lineHeight:1.65,color:"#222",background:"#FAFAF8"}}/>
+                  {re&&<div style={{marginTop:8,padding:"8px 12px",border:"1px solid #FCA5A5",background:"#FFF5F5",fontSize:12,color:"#C00"}}>{re}</div>}
+                  <button onClick={runRep} disabled={!rt.trim()||rl}
+                    style={{marginTop:10,width:"100%",padding:"11px",border:"none",background:(!rt.trim()||rl)?"#CCC":"#111",color:"white",
+                      cursor:(!rt.trim()||rl)?"not-allowed":"pointer",fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",
+                      fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                    {rl?<><SP/>Генерирам...</>:"Генерирай официален отчет"}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div>
+              {rr?(
+                <div style={{background:"white",border:"1px solid #E8E5E0",animation:"fu .2s ease"}}>
+                  <div style={{padding:"11px 14px",borderBottom:"1px solid #E8E5E0",background:"#111",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:7,letterSpacing:2,color:"#555",textTransform:"uppercase"}}>Месечен отчет</div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#fff",marginTop:1}}>{MO[rm].toUpperCase()} {ry}</div>
+                    </div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button className={"cb"+(rcp?" ok":"")} onClick={()=>navigator.clipboard.writeText(rr).then(()=>{setRcp(true);setTimeout(()=>setRcp(false),2000);})}>{rcp?"Копирано":"Копирай"}</button>
+                      <button onClick={saveRep} style={{padding:"4px 10px",border:"1px solid #6EE7B7",background:"transparent",cursor:"pointer",fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"#6EE7B7",fontFamily:"inherit"}}>Запази</button>
+                      <button onClick={()=>setRr("")} style={{padding:"4px 10px",border:"1px solid #444",background:"transparent",cursor:"pointer",fontSize:9,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"#888",fontFamily:"inherit"}}>Изчисти</button>
+                    </div>
+                  </div>
+                  <div style={{padding:"18px 20px",maxHeight:480,overflowY:"auto"}}>
+                    <div style={{fontFamily:"Georgia,serif",fontSize:13.5,lineHeight:1.9,color:"#1A1A1A",whiteSpace:"pre-wrap"}}>{rr}</div>
+                  </div>
+                </div>
+              ):(
+                <div style={{background:"white",border:"1px dashed #DDD",padding:40,textAlign:"center",minHeight:240,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                  <div style={{fontSize:7,letterSpacing:3,color:"#CCC",textTransform:"uppercase",marginBottom:8}}>Очаква входен текст</div>
+                  <div style={{fontSize:13,color:"#CCC",fontWeight:700}}>Отчетът ще се появи тук</div>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Report library */}
+          {rps.length>0&&(
+            <div style={{marginTop:22}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,paddingBottom:8,borderBottom:"1px solid #E8E5E0"}}>
+                <div style={{fontSize:7,letterSpacing:3,color:"#888",textTransform:"uppercase"}}>Библиотека ({rps.length})</div>
+                <div style={{display:"flex",gap:6}}>
+                  {[["nd","Най-нови"],["od","Най-стари"],["mo","По месец"]].map(([s,l])=>(
+                    <button key={s} className={"pb"+(rs===s?" on":"")} onClick={()=>setRs(s)}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}}>
+                {srtRps().map(rep=>{
+                  const isO=exk===("rep-"+rep.id);
+                  return(
+                    <div key={rep.id} style={{background:"white",border:"1px solid #E8E5E0"}}>
+                      <div style={{padding:"11px 14px",borderBottom:"1px solid #F0EDE6",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                        {eid===rep.id?(
+                          <input value={et} onChange={e=>setEt(e.target.value)}
+                            onKeyDown={e=>{if(e.key==="Enter"){setRps(p=>p.map(r=>r.id===rep.id?{...r,title:et}:r));setEid(null);}if(e.key==="Escape")setEid(null);}}
+                            autoFocus style={{flex:1,padding:"3px 6px",border:"1px solid #111",fontSize:12,fontWeight:700,color:"#111"}}/>
+                        ):(
+                          <div style={{fontSize:13,fontWeight:700,color:"#111",flex:1}}>{rep.title}</div>
+                        )}
+                        <div style={{display:"flex",gap:4}}>
+                          {eid===rep.id?(
+                            <button className="cb ok" onClick={()=>{setRps(p=>p.map(r=>r.id===rep.id?{...r,title:et}:r));setEid(null);}}>OK</button>
+                          ):(
+                            <button className="cb" onClick={()=>{setEid(rep.id);setEt(rep.title);}}>Преименувай</button>
+                          )}
+                          <button className="cb" onClick={()=>setExk(isO?null:"rep-"+rep.id)}>{isO?"Затвори":"Преглед"}</button>
+                          <button onClick={()=>setRps(p=>p.filter(r=>r.id!==rep.id))}
+                            style={{padding:"3px 8px",border:"1px solid #FFCDD2",background:"#FFF5F5",cursor:"pointer",fontSize:9,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"#C00",fontFamily:"inherit"}}>X</button>
+                        </div>
+                      </div>
+                      {isO&&(
+                        <div style={{animation:"fu .12s ease"}}>
+                          <div style={{padding:"12px 14px",maxHeight:300,overflowY:"auto",borderBottom:"1px solid #F0EDE6"}}>
+                            <div style={{fontFamily:"Georgia,serif",fontSize:12.5,lineHeight:1.85,color:"#222",whiteSpace:"pre-wrap"}}>{rep.text}</div>
+                          </div>
+                          <div style={{padding:"8px 14px"}}>
+                            <button className={"cb"+(cpk==="rcp-"+rep.id?" ok":"")} onClick={()=>cpt(rep.text,"rcp-"+rep.id)}>{cpk==="rcp-"+rep.id?"Копирано":"Копирай отчета"}</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      </div>
+
+      {/* ══ AI MODAL ══ */}
+      {aim&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}
+          onClick={e=>e.target===e.currentTarget&&setAim(null)}>
+          <div style={{background:"white",width:520,maxWidth:"95vw",maxHeight:"90vh",overflowY:"auto",animation:"fu .15s ease",border:"1px solid #111"}}>
+            <div style={{padding:"14px 18px",background:"#111",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div>
+                <div style={{fontSize:7,letterSpacing:2,color:"#555",textTransform:"uppercase",marginBottom:3}}>AI Разпределение</div>
+                <div style={{fontSize:15,fontWeight:900,color:"#fff"}}>{MO[aim.mi].toUpperCase()} {yr}</div>
+                <div style={{fontSize:10,color:"#555",marginTop:1}}>{WD(yr,aim.mi)} работни дни · {WD(yr,aim.mi)*8}ч очаквано</div>
+              </div>
+              <button onClick={()=>setAim(null)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:18,lineHeight:1,padding:0}}>✕</button>
+            </div>
+            <div style={{padding:20}}>
+              {!aip?(
+                <div>
+                  <textarea value={ait} onChange={e=>setAit(e.target.value)}
+                    placeholder="Опиши работата за месеца свободно. AI ще я разпредели по КАБ категории и часове." rows={7}
+                    style={{width:"100%",padding:"10px",border:"1px solid #DDD",fontSize:13,resize:"vertical",lineHeight:1.65,background:"#FAFAF8",color:"#222"}}/>
+                  {aie&&<div style={{marginTop:8,padding:"8px 12px",border:"1px solid #FCA5A5",background:"#FFF5F5",fontSize:12,color:"#C00"}}>{aie}</div>}
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12}}>
+                    <button onClick={()=>setAim(null)} style={{padding:"9px 18px",border:"1px solid #DDD",background:"white",cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#666",fontFamily:"inherit"}}>Отказ</button>
+                    <button onClick={runAI} disabled={!ait.trim()||ail}
+                      style={{padding:"9px 18px",border:"none",background:(!ait.trim()||ail)?"#CCC":"#111",color:"white",cursor:(!ait.trim()||ail)?"not-allowed":"pointer",
+                        fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"inherit",display:"flex",alignItems:"center",gap:7}}>
+                      {ail?<><SP/>Анализирам...</>:"Разпредели"}
+                    </button>
+                  </div>
+                </div>
+              ):(
+                <div>
+                  {(()=>{const tot=aip.reduce((s,t)=>s+Number(t.h),0),ex=WD(yr,aim.mi)*8,df=tot-ex;return(
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+                      {[["Разпределено",tot+"ч",false],["Очаквано",ex+"ч",false],["Разлика",(df>0?"+":"")+df+"ч",Math.abs(df)>8]].map(([l,v,w])=>(
+                        <div key={l} style={{padding:"9px",border:"1px solid #E8E5E0",background:"#FAFAF8"}}>
+                          <div style={{fontSize:7,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:3}}>{l}</div>
+                          <div style={{fontSize:20,fontWeight:900,color:w?"#E53935":"#111"}}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );})()}
+                  <div style={{border:"1px solid #E8E5E0",marginBottom:14,maxHeight:280,overflowY:"auto"}}>
+                    {aip.map((task,i)=>{const cat=CAT.find(c=>c.id===task.cid);return(
+                      <div key={i} style={{padding:"9px 13px",borderBottom:i<aip.length-1?"1px solid #F0EDE6":"none",display:"flex",justifyContent:"space-between",gap:8}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:7,fontWeight:700,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:2}}>{cat?.label}</div>
+                          <div style={{fontSize:12,color:"#222",lineHeight:1.4}}>{task.description}</div>
+                        </div>
+                        <div style={{fontSize:15,fontWeight:900,color:"#111",whiteSpace:"nowrap"}}>{task.h}ч</div>
+                      </div>
+                    );})}
+                  </div>
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                    <button onClick={()=>setAip(null)} style={{padding:"9px 18px",border:"1px solid #DDD",background:"white",cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#666",fontFamily:"inherit"}}>Редактирай</button>
+                    <button onClick={confAI} style={{padding:"9px 18px",border:"none",background:"#111",color:"white",cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"inherit"}}>Добави всички</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ ADD MANUAL MODAL ══ */}
+      {am&&nt&&(()=>{
+        const cat=CAT.find(c=>c.id===am.cid);if(!cat)return null;
+        return(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}
+            onClick={e=>e.target===e.currentTarget&&setAm(null)}>
+            <div style={{background:"white",width:440,maxWidth:"92vw",border:"1px solid #111",animation:"fu .15s ease"}}>
+              <div style={{padding:"13px 16px",background:"#111",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:7,letterSpacing:2,color:"#555",textTransform:"uppercase",marginBottom:2}}>{cat.label}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>{cat.name}</div>
+                </div>
+                <button onClick={()=>setAm(null)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:18,lineHeight:1,padding:0}}>✕</button>
+              </div>
+              <div style={{padding:18}}>
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:7,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:4}}>Подкатегория</div>
+                  <select value={nt.sub} onChange={e=>setNt({...nt,sub:e.target.value})} style={{width:"100%",padding:"7px",border:"1px solid #DDD",fontSize:12,background:"white",color:"#111"}}>
+                    <option value="">— изберете —</option>
+                    {cat.sub.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:7,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:4}}>Описание *</div>
+                  <textarea value={nt.description} onChange={e=>setNt({...nt,description:e.target.value})}
+                    placeholder="Опишете задачата..." rows={3}
+                    style={{width:"100%",padding:"8px",border:"1px solid #DDD",fontSize:13,resize:"vertical",lineHeight:1.55,color:"#222",background:"#FAFAF8"}}/>
+                </div>
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:7,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:4}}>Часове *</div>
+                  <input type="number" min={0.5} step={0.5} value={nt.h} onChange={e=>setNt({...nt,h:parseFloat(e.target.value)||""})}
+                    style={{width:80,padding:"7px",border:"1px solid #DDD",fontSize:16,fontWeight:900,textAlign:"center",color:"#111"}}/>
+                  <span style={{marginLeft:8,fontSize:12,color:"#888"}}>часа</span>
+                </div>
+                <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                  <button onClick={()=>setAm(null)} style={{padding:"9px 18px",border:"1px solid #DDD",background:"white",cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#666",fontFamily:"inherit"}}>Отказ</button>
+                  <button
+                    onClick={()=>{if(!nt.description.trim()||!nt.h)return;addT(am.mi,[{cid:nt.cid,sub:nt.sub,description:nt.description,h:nt.h}]);setAm(null);fl("Запазено");}}
+                    disabled={!nt.description.trim()||!nt.h}
+                    style={{padding:"9px 18px",border:"none",background:(!nt.description.trim()||!nt.h)?"#CCC":"#111",color:"white",cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"inherit"}}>Добави</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
